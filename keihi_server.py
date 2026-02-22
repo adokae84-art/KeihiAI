@@ -347,4 +347,4 @@ if __name__ == "__main__":
     print("👉 ブラウザで http://localhost:5001 を開いてください")
     print("💡 Claude APIキーを設定するとAI読み取りが有効になります")
     print("   例: set ANTHROPIC_API_KEY=sk-ant-...")
-    app.run(debug=False, port=5001)
+    app.run(host='0.0.0.0', port=10000)
