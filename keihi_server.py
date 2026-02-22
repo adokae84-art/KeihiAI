@@ -104,6 +104,45 @@ def fallback_read(image_path, filename):
     }
 
 
+
+# freee 勘定科目マッピング
+FREEE_ACCOUNT_MAP = {
+    "駐車場": "旅費交通費",
+    "交通費": "旅費交通費",
+    "飲食費": "交際費",
+    "宿泊費": "旅費交通費",
+    "消耗品": "消耗品費",
+    "通信費": "通信費",
+    "その他": "雑費",
+}
+
+def make_freee_csv(receipts, month, applicant):
+    import csv
+    total = 0
+    cats = set()
+    with open("expense_report_freee.csv", "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f)
+        # freee正式ヘッダー
+        writer.writerow([
+            "発生日","借方勘定科目","借方補助科目","借方税区分","借方金額",
+            "貸方勘定科目","貸方補助科目","貸方税区分","貸方金額",
+            "摘要","タグ","メモ","決済期日","口座"
+        ])
+        for r in receipts:
+            cat = r.get("カテゴリ","その他")
+            account = FREEE_ACCOUNT_MAP.get(cat, "雑費")
+            amt = r.get("金額", 0)
+            date = r.get("日付","").replace("-","/")
+            memo = r.get("店名","") + ("（" + applicant + "）" if applicant else "")
+            writer.writerow([
+                date, account, "", "課税仕入10%", str(amt),
+                "現金", "", "", str(amt),
+                memo, "", "", "", ""
+            ])
+            total += amt
+            cats.add(cat)
+    return total, len(cats)
+
 def make_csv(receipts, month, applicant):
     import csv
     total = 0
@@ -299,6 +338,8 @@ def process_files(files_data, month, applicant):
         fmt = status.get("format", "excel")
         if fmt == "csv":
             total, cats = make_csv(receipts, month, applicant)
+        elif fmt == "freee":
+            total, cats = make_freee_csv(receipts, month, applicant)
         elif fmt == "pdf":
             total, cats = make_pdf(receipts, month, applicant)
         else:
@@ -334,6 +375,7 @@ def download():
     files_map = {
         "excel": ("expense_report.xlsx", "expense_report.xlsx"),
         "csv":   ("expense_report.csv",  "expense_report.csv"),
+        "freee": ("expense_report_freee.csv", "freee_import.csv"),
         "pdf":   ("expense_report.pdf",  "expense_report.pdf"),
     }
     filename, dl_name = files_map.get(fmt, files_map["excel"])
@@ -347,4 +389,4 @@ if __name__ == "__main__":
     print("👉 ブラウザで http://localhost:5001 を開いてください")
     print("💡 Claude APIキーを設定するとAI読み取りが有効になります")
     print("   例: set ANTHROPIC_API_KEY=sk-ant-...")
-    app.run(host='0.0.0.0', port=10000)
+    app.run(debug=False, port=5001)
