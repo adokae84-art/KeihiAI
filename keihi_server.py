@@ -63,7 +63,7 @@ def image_to_base64(path):
 def read_receipt_with_claude(image_path):
     """Claude APIで領収書を読み取る（APIキーがある場合）"""
     api_key = os.environ.get("ANTHROPIC_API_KEY")
-    print(f"API KEY found: {api_key[:10]}...")
+    print(f"=== API KEY CHECK: {api_key[:10] if api_key else 'NOT FOUND'} ===")
     if not api_key:
         return None
 
