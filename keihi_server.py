@@ -63,16 +63,29 @@ def image_to_base64(path):
 def read_receipt_with_claude(image_path):
     """Claude APIで領収書を読み取る（APIキーがある場合）"""
     api_key = os.environ.get("ANTHROPIC_API_KEY")
-    print(f"=== API KEY CHECK: {api_key[:10] if api_key else 'NOT FOUND'} ===")
+    print(f"=== API KEY: {api_key[:15] if api_key else 'NOT FOUND'} ===")
     if not api_key:
         return None
 
     try:
         import anthropic
         client = anthropic.Anthropic(api_key=api_key)
-        img = Image.open(image_path)
-        img.save(str(image_path) + "_resized.jpg", "JPEG", quality=85)
-        b64 = image_to_base64(str(image_path) + "_resized.jpg")
+        
+        # PDFとPNG/JPGを両方対応
+        image_path_str = str(image_path)
+        if image_path_str.lower().endswith(".pdf"):
+            # PDFの場合はbase64でそのまま送る
+            with open(image_path_str, "rb") as f:
+                b64 = base64.standard_b64encode(f.read()).decode()
+            media_type = "application/pdf"
+            source = {"type": "base64", "media_type": media_type, "data": b64}
+            content_type = "document"
+        else:
+            img = Image.open(image_path_str)
+            img.save(image_path_str + "_resized.jpg", "JPEG", quality=85)
+            b64 = image_to_base64(image_path_str + "_resized.jpg")
+            source = {"type": "base64", "media_type": "image/jpeg", "data": b64}
+            content_type = "image"
 
         response = client.messages.create(
             model="claude-sonnet-4-6",
@@ -80,7 +93,7 @@ def read_receipt_with_claude(image_path):
             messages=[{
                 "role": "user",
                 "content": [
-                    {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": b64}},
+                    {"type": content_type, "source": source},
                     {"type": "text", "text": "この領収書から以下をJSON形式で抽出してください。{\"店名\": \"\", \"日付\": \"\", \"金額\": 0, \"カテゴリ\": \"\", \"支払方法\": \"\", \"備考\": \"\"}"}
                 ]
             }]
