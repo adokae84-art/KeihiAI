@@ -1,12 +1,10 @@
 """
-🧾 KeihiAI - 経費精算自動化サーバー
+🧾 KeihiAI - 経費精算�E動化サーバ�E
 ======================================
-起動方法:
+起動方況E
 1. pip install flask flask-cors pillow openpyxl anthropic
-2. ANTHROPIC_API_KEY環境変数を設定（任意・なしでもサンプル動作）
-3. python keihi_server.py
-4. ブラウザで http://localhost:5001 を開く
-"""
+2. ANTHROPIC_API_KEY環墁E��数を設定（任意�Eなしでもサンプル動作！E3. python keihi_server.py
+4. ブラウザで http://localhost:5001 を開ぁE"""
 
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
@@ -25,14 +23,13 @@ status = {"step": 0, "done": False, "error": None, "count": 0, "total": 0, "cate
 UPLOAD_DIR = Path("uploads_temp")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-# カテゴリ自動判定
-CATEGORY_RULES = {
-    "駐車場": ["パーキング", "駐車", "parking", "コインパーク"],
-    "交通費": ["電車", "バス", "タクシー", "新幹線", "乗車", "IC"],
-    "飲食費": ["レストラン", "カフェ", "食堂", "居酒屋", "ランチ", "コーヒー", "食事"],
-    "宿泊費": ["ホテル", "旅館", "宿", "inn", "hotel"],
-    "消耗品": ["コンビニ", "ドラッグ", "文具", "ローソン", "セブン", "ファミマ"],
-    "通信費": ["ドコモ", "au", "ソフトバンク", "通信", "インターネット"],
+# カチE��リ自動判宁ECATEGORY_RULES = {
+    "駐車場": ["パ�Eキング", "駐軁E, "parking", "コインパ�Eク"],
+    "交通費": ["電軁E, "バス", "タクシー", "新幹緁E, "乗軁E, "IC"],
+    "飲食費": ["レストラン", "カフェ", "食堁E, "屁E�E屁E, "ランチE, "コーヒ�E", "食亁E],
+    "宿泊費": ["ホテル", "旁E��", "宿", "inn", "hotel"],
+    "消耗品": ["コンビニ", "ドラチE��", "斁E�E", "ローソン", "セブン", "ファミ�E"],
+    "通信費": ["ドコモ", "au", "ソフトバンク", "通信", "インターネッチE],
 }
 
 def guess_category(text):
@@ -40,14 +37,14 @@ def guess_category(text):
         for kw in keywords:
             if kw in text:
                 return cat
-    return "その他"
+    return "そ�E仁E
 
 def extract_amount(text):
     patterns = [
-        r'領収額[^\d]*(\d[\d,]+)円',
-        r'現金[^\d]*(\d[\d,]+)円',
-        r'合計[^\d]*(\d[\d,]+)円',
-        r'(\d[\d,]+)円',
+        r'領収額[^\d]*(\d[\d,]+)冁E,
+        r'現金[^\d]*(\d[\d,]+)冁E,
+        r'合訁E^\d]*(\d[\d,]+)冁E,
+        r'(\d[\d,]+)冁E,
     ]
     for p in patterns:
         m = re.search(p, text)
@@ -60,7 +57,7 @@ def image_to_base64(path):
         return base64.standard_b64encode(f.read()).decode()
 
 def read_receipt_with_claude(image_path):
-    """Claude APIで領収書を読み取る（APIキーがある場合）"""
+    """Claude APIで領収書を読み取る�E�EPIキーがある場合！E""
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         return None
@@ -79,7 +76,7 @@ def read_receipt_with_claude(image_path):
                 "role": "user",
                 "content": [
                     {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": b64}},
-                    {"type": "text", "text": "この領収書から以下をJSON形式で抽出してください。{\"店名\": \"\", \"日付\": \"\", \"金額\": 0, \"カテゴリ\": \"\", \"支払方法\": \"\", \"備考\": \"\"}"}
+                    {"type": "text", "text": "こ�E領収書から以下をJSON形式で抽出してください、E\"店名\": \"\", \"日付\": \"\", \"金額\": 0, \"カチE��リ\": \"\", \"支払方法\": \"\", \"備考\": \"\"}"}
                 ]
             }]
         )
@@ -92,28 +89,28 @@ def read_receipt_with_claude(image_path):
     return None
 
 def fallback_read(image_path, filename):
-    """APIなしのフォールバック（ファイル名とサンプルデータで処理）"""
+    """APIなし�Eフォールバック�E�ファイル名とサンプルチE�Eタで処琁E��E""
     # 実際のアプリではpytesseract等でOCRする
     return {
         "店名": filename.replace(".jpg", "").replace(".png", "").replace(".pdf", ""),
-        "日付": "2025/10/01",
-        "金額": 1000,
-        "カテゴリ": "その他",
-        "支払方法": "現金",
-        "備考": "手動確認推奨"
+        "日仁E: "2025/10/01",
+        "金顁E: 1000,
+        "カチE��リ": "そ�E仁E,
+        "支払方況E: "現釁E,
+        "備老E: "手動確認推奨"
     }
 
 
 
 # freee 勘定科目マッピング
 FREEE_ACCOUNT_MAP = {
-    "駐車場": "旅費交通費",
-    "交通費": "旅費交通費",
+    "駐車場": "旁E��交通費",
+    "交通費": "旁E��交通費",
     "飲食費": "交際費",
-    "宿泊費": "旅費交通費",
+    "宿泊費": "旁E��交通費",
     "消耗品": "消耗品費",
     "通信費": "通信費",
-    "その他": "雑費",
+    "そ�E仁E: "雑費",
 }
 
 def make_freee_csv(receipts, month, applicant):
@@ -122,21 +119,21 @@ def make_freee_csv(receipts, month, applicant):
     cats = set()
     with open("expense_report_freee.csv", "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
-        # freee正式ヘッダー
+        # freee正式�EチE��ー
         writer.writerow([
-            "発生日","借方勘定科目","借方補助科目","借方税区分","借方金額",
-            "貸方勘定科目","貸方補助科目","貸方税区分","貸方金額",
-            "摘要","タグ","メモ","決済期日","口座"
+            "発生日","借方勘定科目","借方補助科目","借方税区刁E,"借方金顁E,
+            "貸方勘定科目","貸方補助科目","貸方税区刁E,"貸方金顁E,
+            "摘要E,"タグ","メモ","決済期日","口座"
         ])
         for r in receipts:
-            cat = r.get("カテゴリ","その他")
+            cat = r.get("カチE��リ","そ�E仁E)
             account = FREEE_ACCOUNT_MAP.get(cat, "雑費")
-            amt = r.get("金額", 0)
-            date = r.get("日付","").replace("-","/")
-            memo = r.get("店名","") + ("（" + applicant + "）" if applicant else "")
+            amt = r.get("金顁E, 0)
+            date = r.get("日仁E,"").replace("-","/")
+            memo = r.get("店名","") + ("�E�E + applicant + "�E�E if applicant else "")
             writer.writerow([
-                date, account, "", "課税仕入10%", str(amt),
-                "現金", "", "", str(amt),
+                date, account, "", "課税仕�E10%", str(amt),
+                "現釁E, "", "", str(amt),
                 memo, "", "", "", ""
             ])
             total += amt
@@ -149,13 +146,13 @@ def make_csv(receipts, month, applicant):
     cats = set()
     with open("expense_report.csv", "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
-        writer.writerow(["No.", "店名", "日付", "カテゴリ", "金額（円）", "支払方法", "備考"])
+        writer.writerow(["No.", "店名", "日仁E, "カチE��リ", "金額（�E�E�E, "支払方況E, "備老E])
         for i, r in enumerate(receipts, 1):
-            writer.writerow([i, r.get("店名",""), r.get("日付",""), r.get("カテゴリ",""),
-                             r.get("金額",0), r.get("支払方法","現金"), r.get("備考","")])
-            total += r.get("金額", 0)
-            cats.add(r.get("カテゴリ","その他"))
-        writer.writerow(["合計", "", "", "", total, "", ""])
+            writer.writerow([i, r.get("店名",""), r.get("日仁E,""), r.get("カチE��リ",""),
+                             r.get("金顁E,0), r.get("支払方況E,"現釁E), r.get("備老E,"")])
+            total += r.get("金顁E, 0)
+            cats.add(r.get("カチE��リ","そ�E仁E))
+        writer.writerow(["合訁E, "", "", "", total, "", ""])
     return total, len(cats)
 
 def make_pdf(receipts, month, applicant):
@@ -176,15 +173,15 @@ def make_pdf(receipts, month, applicant):
     story.append(Paragraph(f"経費精算書　{month}　{applicant or ''}", title_style))
     story.append(Spacer(1, 16))
 
-    data = [["No.", "店名", "日付", "カテゴリ", "金額（円）", "支払方法"]]
+    data = [["No.", "店名", "日仁E, "カチE��リ", "金額（�E�E�E, "支払方況E]]
     total = 0
     cats = set()
     for i, r in enumerate(receipts, 1):
-        data.append([str(i), r.get("店名",""), r.get("日付",""), r.get("カテゴリ",""),
-                     f"{r.get('金額',0):,}", r.get("支払方法","現金")])
-        total += r.get("金額", 0)
-        cats.add(r.get("カテゴリ","その他"))
-    data.append(["合計", "", "", "", f"{total:,}", ""])
+        data.append([str(i), r.get("店名",""), r.get("日仁E,""), r.get("カチE��リ",""),
+                     f"{r.get('金顁E,0):,}", r.get("支払方況E,"現釁E)])
+        total += r.get("金顁E, 0)
+        cats.add(r.get("カチE��リ","そ�E仁E))
+    data.append(["合訁E, "", "", "", f"{total:,}", ""])
 
     table = Table(data, colWidths=[30, 100, 65, 65, 65, 65])
     table.setStyle(TableStyle([
@@ -212,14 +209,14 @@ def make_excel(receipts, month, applicant):
 
     # タイトル
     ws.merge_cells("A1:G1")
-    ws["A1"].value = f"経費精算書　{month}　申請者：{applicant or '未記入'}"
+    ws["A1"].value = f"経費精算書　{month}　申請老E��{applicant or '未記�E'}"
     ws["A1"].font = Font(name="Arial", bold=True, size=13, color="2D6A4F")
     ws["A1"].alignment = Alignment(horizontal="center")
     ws["A1"].fill = PatternFill("solid", start_color="E8F5EE")
     ws.row_dimensions[1].height = 32
 
     # ヘッダー
-    headers = ["No.", "店名", "日付", "カテゴリ", "金額（円）", "支払方法", "備考"]
+    headers = ["No.", "店名", "日仁E, "カチE��リ", "金額（�E�E�E, "支払方況E, "備老E]
     widths =  [5,     24,    14,    14,          13,          12,          28]
     for i, (h, w) in enumerate(zip(headers, widths), 1):
         c = ws.cell(row=2, column=i)
@@ -231,12 +228,12 @@ def make_excel(receipts, month, applicant):
         ws.column_dimensions[get_column_letter(i)].width = w
     ws.row_dimensions[2].height = 22
 
-    # データ
+    # チE�Eタ
     total = 0
     for i, r in enumerate(receipts, 1):
         row = i + 2
         bg = "FFFFFF" if i % 2 == 1 else "F4FAF6"
-        vals = [i, r.get("店名",""), r.get("日付",""), r.get("カテゴリ",""), r.get("金額",0), r.get("支払方法","現金"), r.get("備考","")]
+        vals = [i, r.get("店名",""), r.get("日仁E,""), r.get("カチE��リ",""), r.get("金顁E,0), r.get("支払方況E,"現釁E), r.get("備老E,"")]
         for col, val in enumerate(vals, 1):
             c = ws.cell(row=row, column=col)
             c.value = val
@@ -245,14 +242,13 @@ def make_excel(receipts, month, applicant):
             c.alignment = Alignment(horizontal="center" if col != 2 else "left", vertical="center")
             c.border = bdr
             if col == 5: c.number_format = '#,##0'
-        total += r.get("金額", 0)
+        total += r.get("金顁E, 0)
         ws.row_dimensions[row].height = 20
 
-    # 合計行
-    tr = len(receipts) + 3
+    # 合計衁E    tr = len(receipts) + 3
     ws.merge_cells(f"A{tr}:D{tr}")
     c = ws.cell(row=tr, column=1)
-    c.value = "合計"
+    c.value = "合訁E
     c.font = Font(name="Arial", bold=True, size=11)
     c.fill = PatternFill("solid", start_color="E8F5EE")
     c.alignment = Alignment(horizontal="center")
@@ -271,22 +267,20 @@ def make_excel(receipts, month, applicant):
         ws.cell(row=tr, column=col).border = bdr
     ws.row_dimensions[tr].height = 26
 
-    # カテゴリ別集計シート
-    ws2 = wb.create_sheet("カテゴリ別集計")
+    # カチE��リ別雁E��シーチE    ws2 = wb.create_sheet("カチE��リ別雁E��E)
     cat_totals = {}
     for r in receipts:
-        cat = r.get("カテゴリ","その他")
-        cat_totals[cat] = cat_totals.get(cat, 0) + r.get("金額", 0)
+        cat = r.get("カチE��リ","そ�E仁E)
+        cat_totals[cat] = cat_totals.get(cat, 0) + r.get("金顁E, 0)
 
-    ws2.append(["カテゴリ", "金額（円）"])
+    ws2.append(["カチE��リ", "金額（�E�E�E])
     for cat, amt in cat_totals.items():
         ws2.append([cat, amt])
 
-    # 棒グラフ
-    chart = BarChart()
+    # 棒グラチE    chart = BarChart()
     chart.type = "col"
-    chart.title = "カテゴリ別経費"
-    chart.y_axis.title = "金額（円）"
+    chart.title = "カチE��リ別経費"
+    chart.y_axis.title = "金額（�E�E�E
     chart.style = 10
     chart.width = 16
     chart.height = 10
@@ -314,8 +308,7 @@ def process_files(files_data, month, applicant):
             path.write_bytes(data)
             saved_paths.append((name, path))
 
-        # Step2: AI文字認識
-        status["step"] = 2
+        # Step2: AI斁E��認譁E        status["step"] = 2
         for name, path in saved_paths:
             result = read_receipt_with_claude(path)
             if not result:
@@ -323,17 +316,16 @@ def process_files(files_data, month, applicant):
                 result = fallback_read(path, name)
             receipts.append(result)
 
-        # Step3: カテゴリ分類
-        status["step"] = 3
+        # Step3: カチE��リ刁E��E        status["step"] = 3
         for r in receipts:
-            if not r.get("カテゴリ") or r["カテゴリ"] == "その他":
-                text = r.get("店名","") + r.get("備考","")
-                r["カテゴリ"] = guess_category(text)
+            if not r.get("カチE��リ") or r["カチE��リ"] == "そ�E仁E:
+                text = r.get("店名","") + r.get("備老E,"")
+                r["カチE��リ"] = guess_category(text)
 
         # Step4: 整形
         status["step"] = 4
 
-        # Step5: 出力形式に応じて生成
+        # Step5: 出力形式に応じて生�E
         status["step"] = 5
         fmt = status.get("format", "excel")
         if fmt == "csv":
@@ -386,7 +378,7 @@ def download():
 
 if __name__ == "__main__":
     print("🧾 KeihiAI 起動中...")
-    print("👉 ブラウザで http://localhost:5001 を開いてください")
-    print("💡 Claude APIキーを設定するとAI読み取りが有効になります")
-    print("   例: set ANTHROPIC_API_KEY=sk-ant-...")
-    app.run(debug=False, port=5001)
+    print("👉 ブラウザで http://localhost:5001 を開ぁE��ください")
+    print("💡 Claude APIキーを設定するとAI読み取りが有効になりまぁE)
+    print("   侁E set ANTHROPIC_API_KEY=sk-ant-...")
+    app.run(debug=False, host='0.0.0.0', port=10000)
