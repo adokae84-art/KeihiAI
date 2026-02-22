@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KeihiAI — 経費精算自動化</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --white: #FFFFFF;
+    --ink: #1C1C1C;
+    --muted: #8A8680;
+    --accent: #2D6A4F;
+    --accent2: #52B788;
+    --warn: #E07A5F;
+    --border: #E0DDD8;
+    --card: #FFFFFF;
+    --surface: #F0EDE8;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Noto Sans JP', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* Texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 28px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    padding: 40px 0 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.6rem;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+
+  .logo span { color: var(--accent); }
+
+  .logo-sub {
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .version {
+    font-size: 0.72rem;
+    background: var(--accent);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 100px;
+    letter-spacing: 0.05em;
+  }
+
+  /* Hero */
+  .hero {
+    padding: 56px 0 40px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    align-items: center;
+  }
+
+  .hero-text h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2.8rem;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    margin-bottom: 16px;
+    animation: fadeUp 0.7s ease both;
+  }
+
+  .hero-text h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .hero-text p {
+    color: var(--muted);
+    font-size: 0.92rem;
+    line-height: 1.8;
+    animation: fadeUp 0.7s 0.1s ease both;
+  }
+
+  .hero-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    animation: fadeUp 0.7s 0.2s ease both;
+  }
+
+  .stat-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2rem;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .stat-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* Upload zone */
+  .upload-section {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px;
+    margin-bottom: 20px;
+    animation: fadeUp 0.7s 0.3s ease both;
+  }
+
+  .section-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 14px;
+    padding: 48px 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg);
+    position: relative;
+  }
+
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent2);
+    background: #F0F7F4;
+  }
+
+  .drop-icon { font-size: 2.5rem; margin-bottom: 12px; display: block; }
+  .drop-title { font-size: 1rem; font-weight: 500; margin-bottom: 6px; }
+  .drop-sub { font-size: 0.82rem; color: var(--muted); }
+
+  #fileInput { display: none; }
+
+  /* File list */
+  .file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  .file-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 12px 16px;
+    animation: fadeUp 0.3s ease both;
+  }
+
+  .file-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .file-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+  .file-name { font-size: 0.85rem; flex: 1; }
+  .file-size { font-size: 0.75rem; color: var(--muted); }
+
+  .file-remove {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    background: var(--border);
+    cursor: pointer;
+    font-size: 0.7rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .file-remove:hover { background: var(--warn); color: white; }
+
+  /* Options */
+  .options-section {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px 40px;
+    margin-bottom: 20px;
+    animation: fadeUp 0.7s 0.4s ease both;
+  }
+
+  .options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .option-item label {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 8px;
+    letter-spacing: 0.03em;
+  }
+
+  .option-item select, .option-item input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 0.88rem;
+    color: var(--ink);
+    font-family: 'Noto Sans JP', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+    appearance: none;
+  }
+
+  .option-item select:focus, .option-item input:focus {
+    border-color: var(--accent2);
+  }
+
+  /* Generate button */
+  .analyze-btn {
+    width: 100%;
+    padding: 20px;
+    background: var(--accent);
+    border: none;
+    border-radius: 14px;
+    color: white;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: all 0.2s;
+    margin-top: 4px;
+  }
+
+  .analyze-btn:hover { background: #235A42; transform: translateY(-2px); box-shadow: 0 12px 32px rgba(45,106,79,0.25); }
+  .analyze-btn:disabled { background: var(--border); color: var(--muted); transform: none; box-shadow: none; cursor: not-allowed; }
+
+  /* Progress */
+  .progress-section {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px;
+    display: none;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .progress-section.visible { display: block; }
+
+  .progress-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.4rem;
+    margin-bottom: 6px;
+  }
+
+  .progress-sub { color: var(--muted); font-size: 0.85rem; margin-bottom: 28px; }
+
+  .progress-bar-wrap {
+    background: var(--surface);
+    border-radius: 100px;
+    height: 4px;
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 100px;
+    width: 0%;
+    transition: width 0.5s ease;
+  }
+
+  .progress-steps { display: flex; flex-direction: column; gap: 14px; }
+
+  .p-step {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 0.88rem;
+    color: var(--muted);
+    transition: color 0.3s;
+  }
+
+  .p-step.active { color: var(--ink); }
+  .p-step.done { color: var(--accent); }
+
+  .p-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+    transition: all 0.3s;
+  }
+
+  .p-step.done .p-icon { background: #E8F5EE; border-color: var(--accent2); color: var(--accent); }
+  .p-step.active .p-icon { background: var(--accent); border-color: var(--accent); color: white; animation: pulse 1.2s infinite; }
+
+  /* Result */
+  .result-section {
+    background: var(--white);
+    border: 1px solid #B7DEC8;
+    border-radius: 20px;
+    padding: 40px;
+    display: none;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .result-section.visible { display: block; }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .result-icon-wrap {
+    width: 56px;
+    height: 56px;
+    background: #E8F5EE;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+  }
+
+  .result-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.4rem;
+    margin-bottom: 4px;
+  }
+
+  .result-sub { color: var(--muted); font-size: 0.85rem; }
+
+  /* Summary cards */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .summary-card {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 16px 20px;
+    text-align: center;
+  }
+
+  .summary-val {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.6rem;
+    color: var(--accent);
+    display: block;
+  }
+
+  .summary-key { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+
+  .result-actions { display: flex; gap: 12px; }
+
+  .btn-dl {
+    flex: 1;
+    padding: 14px;
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-dl:hover { background: #235A42; transform: translateY(-1px); }
+
+  .btn-reset {
+    padding: 14px 24px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 500;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-reset:hover { border-color: var(--ink); color: var(--ink); }
+
+  footer {
+    text-align: center;
+    padding: 48px 0;
+    color: var(--muted);
+    font-size: 0.75rem;
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  @media (max-width: 640px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero-text h1 { font-size: 2rem; }
+    .options-grid { grid-template-columns: 1fr; }
+    .summary-grid { grid-template-columns: 1fr; }
+    .upload-section, .options-section { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div>
+      <div class="logo">Keihi<span>AI</span></div>
+      <div class="logo-sub">経費精算 自動化ツール</div>
+    </div>
+    <div class="version">BETA</div>
+  </header>
+
+  <div class="hero">
+    <div class="hero-text">
+      <h1>レシートを<br>撮るだけで<br><em>Excel完成</em></h1>
+      <p>写真・PDF・画像をまとめてアップするだけ。AIが自動で読み取り、カテゴリ分類してグラフ付きExcelを生成します。</p>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-card">
+        <span class="stat-num">秒</span>
+        <span class="stat-label">処理時間（1枚あたり）</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">98%</span>
+        <span class="stat-label">文字認識精度</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">自動</span>
+        <span class="stat-label">カテゴリ分類</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">無料</span>
+        <span class="stat-label">現在ベータ版</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload -->
+  <div class="upload-section" id="uploadSection">
+    <div class="section-label">① ファイルをアップロード</div>
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <span class="drop-icon">🧾</span>
+      <div class="drop-title">ここにファイルをドロップ、またはクリック</div>
+      <div class="drop-sub">JPG / PNG / PDF に対応 ・ 複数ファイル同時OK</div>
+      <input type="file" id="fileInput" multiple accept="image/*,.pdf" onchange="handleFiles(this.files)">
+    </div>
+    <div class="file-list" id="fileList"></div>
+  </div>
+
+  <!-- Options -->
+  <div class="options-section">
+    <div class="section-label">② オプション設定</div>
+    <div class="options-grid">
+      <div class="option-item">
+        <label>対象月</label>
+        <input type="month" id="targetMonth" value="2025-10">
+      </div>
+      <div class="option-item">
+        <label>申請者名</label>
+        <input type="text" id="applicant" placeholder="例：山田 太郎">
+      </div>
+      <div class="option-item">
+        <label>通貨</label>
+        <select id="currency">
+          <option value="JPY">JPY（円）</option>
+          <option value="USD">USD（ドル）</option>
+        </select>
+      </div>
+      <div class="option-item">
+        <label>出力形式</label>
+        <select id="outputFormat">
+          <option value="excel">Excel（グラフ付き）</option>
+          <option value="csv">CSV</option>
+          <option value="pdf">PDF（申請書）</option>
+        </select>
+      </div>
+    </div>
+    <button class="analyze-btn" id="analyzeBtn" onclick="startAnalyze()" disabled>
+      🔍 &nbsp;レシートを読み取ってExcelを生成
+    </button>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-section" id="progressSection">
+    <div class="progress-title">読み取り中...</div>
+    <div class="progress-sub" id="progressSub">ファイルを確認しています</div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div class="progress-steps">
+      <div class="p-step" id="ps1"><div class="p-icon">1</div><span>ファイルを読み込み中</span></div>
+      <div class="p-step" id="ps2"><div class="p-icon">2</div><span>AIが文字を認識中</span></div>
+      <div class="p-step" id="ps3"><div class="p-icon">3</div><span>カテゴリを自動分類中</span></div>
+      <div class="p-step" id="ps4"><div class="p-icon">4</div><span>Excelに整形中</span></div>
+      <div class="p-step" id="ps5"><div class="p-icon">5</div><span>グラフを生成中</span></div>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div class="result-section" id="resultSection">
+    <div class="result-header">
+      <div class="result-icon-wrap">✅</div>
+      <div>
+        <div class="result-title">Excel生成完了！</div>
+        <div class="result-sub" id="resultSub">2件のレシートを読み取りました</div>
+      </div>
+    </div>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <span class="summary-val" id="sumCount">0</span>
+        <div class="summary-key">読み取り件数</div>
+      </div>
+      <div class="summary-card">
+        <span class="summary-val" id="sumTotal">¥0</span>
+        <div class="summary-key">合計金額</div>
+      </div>
+      <div class="summary-card">
+        <span class="summary-val" id="sumCats">0</span>
+        <div class="summary-key">カテゴリ数</div>
+      </div>
+    </div>
+    <div class="result-actions">
+      <button class="btn-dl" id="dlBtn" onclick="window.location='/download_expense'">⬇️ ダウンロード</button>
+      <button class="btn-reset" onclick="resetApp()">もう一度</button>
+    </div>
+  </div>
+
+  <footer>KeihiAI — Powered by Claude × OpenCV × openpyxl</footer>
+</div>
+
+<script>
+  let files = [];
+
+  // ドラッグ&ドロップ
+  const dz = document.getElementById('dropZone');
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('drag-over');
+    handleFiles(e.dataTransfer.files);
+  });
+
+  function handleFiles(newFiles) {
+    for (const f of newFiles) files.push(f);
+    renderFileList();
+    document.getElementById('analyzeBtn').disabled = files.length === 0;
+  }
+
+  function renderFileList() {
+    const list = document.getElementById('fileList');
+    list.innerHTML = '';
+    files.forEach((f, i) => {
+      const item = document.createElement('div');
+      item.className = 'file-item';
+      const isImg = f.type.startsWith('image/');
+      const thumb = document.createElement('div');
+      thumb.className = 'file-thumb';
+      if (isImg) {
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(f);
+        thumb.appendChild(img);
+      } else {
+        thumb.textContent = '📄';
+      }
+      item.innerHTML = `
+        <div class="file-name">${f.name}</div>
+        <div class="file-size">${(f.size/1024).toFixed(0)}KB</div>
+        <button class="file-remove" onclick="removeFile(${i})">✕</button>
+      `;
+      item.insertBefore(thumb, item.firstChild);
+      list.appendChild(item);
+    });
+  }
+
+  function removeFile(i) {
+    files.splice(i, 1);
+    renderFileList();
+    document.getElementById('analyzeBtn').disabled = files.length === 0;
+  }
+
+  async function startAnalyze() {
+    document.getElementById('uploadSection').style.opacity = '0.4';
+    document.getElementById('uploadSection').style.pointerEvents = 'none';
+    document.getElementById('progressSection').classList.add('visible');
+
+    const formData = new FormData();
+    files.forEach(f => formData.append('files', f));
+    formData.append('month', document.getElementById('targetMonth').value);
+    formData.append('applicant', document.getElementById('applicant').value);
+    formData.append('format', document.getElementById('outputFormat').value);
+
+    // サーバーに送信
+    fetch('/analyze', { method: 'POST', body: formData });
+
+    // プログレス表示
+    const steps = [
+      { id: 'ps1', label: 'ファイルを読み込み中', prog: 20 },
+      { id: 'ps2', label: 'AIが文字を認識中', prog: 40 },
+      { id: 'ps3', label: 'カテゴリを自動分類中', prog: 60 },
+      { id: 'ps4', label: 'Excelに整形中', prog: 80 },
+      { id: 'ps5', label: 'グラフを生成中', prog: 100 },
+    ];
+    const bar = document.getElementById('progressBar');
+    const sub = document.getElementById('progressSub');
+    let last = 0;
+
+    const poll = setInterval(async () => {
+      try {
+        const res = await fetch('/status_expense');
+        const data = await res.json();
+        const step = data.step;
+        if (step > last) {
+          if (last > 0) {
+            const prev = document.getElementById(steps[last-1].id);
+            prev.classList.remove('active'); prev.classList.add('done');
+            prev.querySelector('.p-icon').textContent = '✓';
+          }
+          if (step <= steps.length) {
+            const cur = document.getElementById(steps[step-1].id);
+            cur.classList.add('active');
+            bar.style.width = steps[step-1].prog + '%';
+            sub.textContent = steps[step-1].label;
+          }
+          last = step;
+        }
+        if (data.done) {
+          clearInterval(poll);
+          if (last > 0 && last <= steps.length) {
+            const prev = document.getElementById(steps[last-1].id);
+            prev.classList.remove('active'); prev.classList.add('done');
+            prev.querySelector('.p-icon').textContent = '✓';
+          }
+          bar.style.width = '100%';
+          setTimeout(() => showResult(data), 600);
+        }
+        if (data.error) {
+          clearInterval(poll);
+          sub.textContent = 'エラー: ' + data.error;
+        }
+      } catch(e) {}
+    }, 1000);
+  }
+
+  function showResult(data) {
+    document.getElementById('progressSection').classList.remove('visible');
+    document.getElementById('resultSection').classList.add('visible');
+    document.getElementById('sumCount').textContent = data.count || files.length;
+    document.getElementById('sumTotal').textContent = '¥' + (data.total || 0).toLocaleString();
+    document.getElementById('sumCats').textContent = data.categories || 1;
+    document.getElementById('resultSub').textContent = `${files.length}件のファイルを処理しました`;
+    const fmt = document.getElementById('outputFormat').value;
+    const labels = { excel: '⬇️ Excelをダウンロード', csv: '⬇️ CSVをダウンロード', pdf: '⬇️ PDFをダウンロード' };
+    document.getElementById('dlBtn').textContent = labels[fmt] || '⬇️ ダウンロード';
+  }
+
+  function resetApp() {
+    files = [];
+    renderFileList();
+    document.getElementById('uploadSection').style.opacity = '1';
+    document.getElementById('uploadSection').style.pointerEvents = 'auto';
+    document.getElementById('progressSection').classList.remove('visible');
+    document.getElementById('resultSection').classList.remove('visible');
+    document.getElementById('analyzeBtn').disabled = true;
+    document.getElementById('progressBar').style.width = '0%';
+    ['ps1','ps2','ps3','ps4','ps5'].forEach((id,i) => {
+      const el = document.getElementById(id);
+      el.classList.remove('active','done');
+      el.querySelector('.p-icon').textContent = i+1;
+    });
+  }
+</script>
+</body>
+</html>
