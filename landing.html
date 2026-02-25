@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KeihiAI — レシートを撮るだけで、経費精算が終わる。</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700;900&family=Noto+Sans+JP:wght@300;400;500&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green-dark: #1a3d2b;
+    --green-mid: #2d6a4f;
+    --green-accent: #52b788;
+    --green-light: #b7e4c7;
+    --cream: #f8f4ee;
+    --text: #1a1a1a;
+    --text-light: #666;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.2rem 2.5rem;
+    background: rgba(248,244,238,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+  }
+  .nav-logo {
+    font-family: 'Noto Serif JP', serif;
+    font-weight: 700; font-size: 1.2rem;
+    color: var(--green-dark);
+    letter-spacing: 0.05em;
+  }
+  .nav-cta {
+    background: var(--green-dark);
+    color: #fff;
+    padding: 0.55rem 1.4rem;
+    border-radius: 100px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+  .nav-cta:hover { background: var(--green-mid); }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 8rem 2rem 4rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 30%, rgba(82,183,136,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: var(--green-light);
+    color: var(--green-dark);
+    padding: 0.35rem 1rem;
+    border-radius: 100px;
+    font-size: 0.8rem; font-weight: 500;
+    margin-bottom: 2rem;
+    animation: fadeUp 0.6s ease both;
+  }
+  .hero h1 {
+    font-family: 'Noto Serif JP', serif;
+    font-size: clamp(2.2rem, 6vw, 4rem);
+    font-weight: 900;
+    line-height: 1.25;
+    color: var(--green-dark);
+    margin-bottom: 1.5rem;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+  .hero h1 em {
+    font-style: normal;
+    color: var(--green-accent);
+    position: relative;
+  }
+  .hero h1 em::after {
+    content: '';
+    position: absolute; bottom: -4px; left: 0; right: 0;
+    height: 3px;
+    background: var(--green-accent);
+    border-radius: 2px;
+  }
+  .hero-sub {
+    font-size: clamp(1rem, 2.5vw, 1.2rem);
+    color: var(--text-light);
+    line-height: 1.8;
+    max-width: 560px;
+    margin-bottom: 2.5rem;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+  .hero-btns {
+    display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;
+    animation: fadeUp 0.6s 0.3s ease both;
+  }
+  .btn-primary {
+    background: var(--green-dark);
+    color: #fff;
+    padding: 0.9rem 2.2rem;
+    border-radius: 100px;
+    font-size: 1rem; font-weight: 500;
+    text-decoration: none;
+    transition: transform 0.2s, background 0.2s;
+    box-shadow: 0 4px 20px rgba(26,61,43,0.25);
+  }
+  .btn-primary:hover { transform: translateY(-2px); background: var(--green-mid); }
+  .btn-secondary {
+    background: transparent;
+    color: var(--green-dark);
+    padding: 0.9rem 2.2rem;
+    border-radius: 100px;
+    font-size: 1rem; font-weight: 500;
+    text-decoration: none;
+    border: 1.5px solid var(--green-dark);
+    transition: transform 0.2s, background 0.2s;
+  }
+  .btn-secondary:hover { transform: translateY(-2px); background: rgba(26,61,43,0.05); }
+
+  /* MOCKUP */
+  .mockup-wrap {
+    margin-top: 4rem;
+    animation: fadeUp 0.8s 0.4s ease both;
+    position: relative;
+  }
+  .mockup {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 20px 80px rgba(0,0,0,0.12);
+    padding: 2rem;
+    max-width: 380px;
+    margin: 0 auto;
+    border: 1px solid rgba(0,0,0,0.06);
+  }
+  .mockup-header {
+    display: flex; align-items: center; gap: 0.6rem;
+    margin-bottom: 1.5rem;
+  }
+  .mockup-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .mockup-stat {
+    background: #f5f5f5;
+    border-radius: 12px;
+    padding: 1.2rem;
+    margin-bottom: 0.75rem;
+    text-align: center;
+  }
+  .mockup-stat-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--green-mid);
+  }
+  .mockup-stat-label { font-size: 0.75rem; color: var(--text-light); margin-top: 0.2rem; }
+  .mockup-btn {
+    background: var(--green-dark);
+    color: #fff;
+    border-radius: 10px;
+    padding: 0.9rem;
+    text-align: center;
+    font-size: 0.9rem; font-weight: 500;
+    margin-top: 1rem;
+  }
+
+  /* STEPS */
+  .steps {
+    padding: 6rem 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    color: var(--green-accent);
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+  .section-title {
+    font-family: 'Noto Serif JP', serif;
+    font-size: clamp(1.6rem, 4vw, 2.2rem);
+    font-weight: 700;
+    color: var(--green-dark);
+    margin-bottom: 3rem;
+    line-height: 1.4;
+  }
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+  }
+  .step-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 2rem;
+    border: 1px solid rgba(0,0,0,0.06);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .step-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.08); }
+  .step-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--green-light);
+    line-height: 1;
+    margin-bottom: 1rem;
+  }
+  .step-card h3 {
+    font-size: 1.05rem; font-weight: 500;
+    color: var(--green-dark);
+    margin-bottom: 0.5rem;
+  }
+  .step-card p { font-size: 0.9rem; color: var(--text-light); line-height: 1.7; }
+
+  /* FEATURES */
+  .features {
+    background: var(--green-dark);
+    padding: 6rem 2rem;
+    color: #fff;
+  }
+  .features-inner { max-width: 900px; margin: 0 auto; }
+  .features .section-label { color: var(--green-accent); }
+  .features .section-title { color: #fff; }
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+  }
+  .feature-item {
+    padding: 1.5rem;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .feature-icon { font-size: 1.8rem; margin-bottom: 0.75rem; }
+  .feature-item h3 { font-size: 0.95rem; font-weight: 500; margin-bottom: 0.4rem; }
+  .feature-item p { font-size: 0.85rem; color: rgba(255,255,255,0.6); line-height: 1.6; }
+
+  /* PRICING */
+  .pricing {
+    padding: 6rem 2rem;
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .price-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 3rem 2.5rem;
+    border: 2px solid var(--green-accent);
+    box-shadow: 0 12px 50px rgba(82,183,136,0.15);
+    margin-top: 2rem;
+  }
+  .price-badge {
+    display: inline-block;
+    background: var(--green-accent);
+    color: #fff;
+    font-size: 0.8rem; font-weight: 500;
+    padding: 0.3rem 0.9rem;
+    border-radius: 100px;
+    margin-bottom: 1.5rem;
+  }
+  .price-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: var(--green-dark);
+    line-height: 1;
+  }
+  .price-num span { font-size: 1.2rem; }
+  .price-period { color: var(--text-light); font-size: 0.9rem; margin-bottom: 2rem; margin-top: 0.3rem; }
+  .price-list { list-style: none; text-align: left; margin-bottom: 2rem; }
+  .price-list li {
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 0.9rem;
+    display: flex; align-items: center; gap: 0.6rem;
+  }
+  .price-list li::before { content: '✓'; color: var(--green-accent); font-weight: 700; }
+  .price-cta {
+    display: block;
+    background: var(--green-dark);
+    color: #fff;
+    padding: 1rem;
+    border-radius: 100px;
+    font-size: 1rem; font-weight: 500;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+  .price-cta:hover { background: var(--green-mid); }
+  .price-note { font-size: 0.8rem; color: var(--text-light); margin-top: 1rem; }
+
+  /* FOOTER */
+  footer {
+    background: var(--green-dark);
+    color: rgba(255,255,255,0.5);
+    text-align: center;
+    padding: 2rem;
+    font-size: 0.85rem;
+  }
+  footer strong { color: #fff; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">KeihiAI</div>
+  <a href="https://keihiai.onrender.com" class="nav-cta">無料で試す →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">🧾 AI経費精算ツール</div>
+  <h1>レシートを撮るだけで、<br><em>経費精算が終わる。</em></h1>
+  <p class="hero-sub">写真を撮ってアップロードするだけ。AIが自動で金額・店名・カテゴリを読み取り、Excelやfreee用CSVを即生成します。</p>
+  <div class="hero-btns">
+    <a href="https://keihiai.onrender.com" class="btn-primary">無料で試してみる</a>
+    <a href="#how" class="btn-secondary">使い方を見る</a>
+  </div>
+  <div class="mockup-wrap">
+    <div class="mockup">
+      <div class="mockup-header">
+        <div class="mockup-dot" style="background:#ff6b6b"></div>
+        <div class="mockup-dot" style="background:#ffd93d"></div>
+        <div class="mockup-dot" style="background:#6bcb77"></div>
+      </div>
+      <div class="mockup-stat">
+        <div class="mockup-stat-num">¥15,920</div>
+        <div class="mockup-stat-label">合計金額</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+        <div class="mockup-stat">
+          <div class="mockup-stat-num" style="font-size:1.4rem">3</div>
+          <div class="mockup-stat-label">読み取り件数</div>
+        </div>
+        <div class="mockup-stat">
+          <div class="mockup-stat-num" style="font-size:1.4rem">3</div>
+          <div class="mockup-stat-label">カテゴリ数</div>
+        </div>
+      </div>
+      <div class="mockup-btn">⬇ Excelをダウンロード</div>
+    </div>
+  </div>
+</section>
+
+<!-- STEPS -->
+<section class="steps" id="how">
+  <div class="section-label">HOW IT WORKS</div>
+  <div class="section-title">たった3ステップ</div>
+  <div class="steps-grid">
+    <div class="step-card">
+      <div class="step-num">01</div>
+      <h3>📸 レシートをアップ</h3>
+      <p>写真・PDF・複数枚まとめてOK。スマホから直接アップロードできます。</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">02</div>
+      <h3>🤖 AIが自動読み取り</h3>
+      <p>店名・日付・金額・カテゴリをAIが自動で抽出。手入力ゼロ。</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">03</div>
+      <h3>📊 ファイルをダウンロード</h3>
+      <p>Excel・CSV・freee連携用CSVをワンクリックで生成。そのまま提出できます。</p>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features">
+  <div class="features-inner">
+    <div class="section-label">FEATURES</div>
+    <div class="section-title">KeihiAIでできること</div>
+    <div class="features-grid">
+      <div class="feature-item">
+        <div class="feature-icon">📷</div>
+        <h3>写真・PDF両対応</h3>
+        <p>スマホで撮った写真もPDFも、どちらもAIが読み取ります。</p>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">📋</div>
+        <h3>3形式で出力</h3>
+        <p>Excel（グラフ付き）・CSV・freee連携用CSVの3形式に対応。</p>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">🏷️</div>
+        <h3>カテゴリ自動分類</h3>
+        <p>交通費・飲食費・消耗品などを自動で分類します。</p>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">📦</div>
+        <h3>複数枚まとめて処理</h3>
+        <p>1ヶ月分のレシートをまとめてアップして一括処理。</p>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">🌐</div>
+        <h3>インストール不要</h3>
+        <p>ブラウザで動くのでアプリのインストール不要。スマホでもOK。</p>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">🔗</div>
+        <h3>freee連携対応</h3>
+        <p>freeeにそのまま取り込めるCSVフォーマットで出力できます。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+  <div class="section-label">PRICING</div>
+  <div class="section-title">シンプルな料金プラン</div>
+  <div class="price-card">
+    <div class="price-badge">現在無料公開中</div>
+    <div class="price-num"><span>¥</span>0</div>
+    <div class="price-period">今すぐ無料で使えます</div>
+    <ul class="price-list">
+      <li>レシート・PDF読み取り</li>
+      <li>Excel・CSV・freee用CSV出力</li>
+      <li>複数ファイル同時処理</li>
+      <li>カテゴリ自動分類</li>
+      <li>インストール不要</li>
+    </ul>
+    <a href="https://keihiai.onrender.com" class="price-cta">無料で試してみる →</a>
+    <p class="price-note">クレジットカード不要・登録不要</p>
+  </div>
+</section>
+
+<footer>
+  <strong>KeihiAI</strong> — Powered by Claude × OpenCV × openpyxl<br>
+  <span style="font-size:0.75rem;margin-top:0.5rem;display:block">© 2026 KeihiAI</span>
+</footer>
+
+</body>
+</html>
