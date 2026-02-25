@@ -383,14 +383,6 @@ def index():
 def landing():
     return send_file("landing.html")
 
-@app.route("/landing")
-def landing():
-    return send_file("landing.html")
-
-@app.route("/landing.html")
-def landing_html():
-    return send_file("landing.html")
-
 @app.route("/analyze", methods=["POST"])
 def analyze():
     global status
