@@ -364,7 +364,9 @@ def process_files(files_data, month, applicant):
 
     except Exception as e:
         status["error"] = str(e)
-
+@app.route("/landing")
+def landing():
+    return send_file("landing.html")
 @app.route("/")
 def index():
     return send_file("keihi_app.html")
