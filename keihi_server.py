@@ -99,9 +99,20 @@ def read_receipt_with_claude(image_path):
             }]
         )
         text = response.content[0].text
-        match = re.search(r'\{.*\}', text, re.DOTALL)
+        # 最初の完全なJSONオブジェクトだけを取得
+        match = re.search(r'\{[^{}]*\}', text)
         if match:
-            return json.loads(match.group())
+            try:
+                return json.loads(match.group())
+            except:
+                pass
+        # フォールバック: DOTALLで試す
+        match = re.search(r'\{.*?\}', text, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group())
+            except:
+                pass
     except Exception as e:
         print(f"Claude API error: {e}")
     return None
@@ -120,39 +131,38 @@ def fallback_read(image_path, filename):
 
 
 
-# freee 勘定科目マッピング
-FREEE_ACCOUNT_MAP = {
-    "駐車場": "旅費交通費",
-    "交通費": "旅費交通費",
-    "飲食費": "交際費",
-    "宿泊費": "旅費交通費",
-    "消耗品": "消耗品費",
-    "通信費": "通信費",
-    "その他": "雑費",
-}
-
 def make_freee_csv(receipts, month, applicant):
+    """freee取引インポート用CSV（正式フォーマット）"""
     import csv
     total = 0
     cats = set()
+    
+    # freee勘定科目→収支区分マッピング
+    INCOME_EXPENSE_MAP = {
+        "旅費交通費": "支出",
+        "交際費": "支出",
+        "消耗品費": "支出",
+        "通信費": "支出",
+        "雑費": "支出",
+    }
+    
     with open("expense_report_freee.csv", "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
-        # freee正式ヘッダー
+        # freee取引インポート正式ヘッダー
         writer.writerow([
-            "発生日","借方勘定科目","借方補助科目","借方税区分","借方金額",
-            "貸方勘定科目","貸方補助科目","貸方税区分","貸方金額",
-            "摘要","タグ","メモ","決済期日","口座"
+            "発生日", "収支区分", "勘定科目", "税区分", "金額", "決済口座", "摘要"
         ])
         for r in receipts:
-            cat = r.get("カテゴリ","その他")
+            cat = r.get("カテゴリ", "その他")
             account = FREEE_ACCOUNT_MAP.get(cat, "雑費")
+            income_expense = INCOME_EXPENSE_MAP.get(account, "支出")
             amt = r.get("金額", 0)
-            date = r.get("日付","").replace("-","/")
-            memo = r.get("店名","") + ("（" + applicant + "）" if applicant else "")
+            date = r.get("日付", "").replace("-", "/")
+            memo = r.get("店名", "")
+            if applicant:
+                memo += f"（{applicant}）"
             writer.writerow([
-                date, account, "", "課税仕入10%", str(amt),
-                "現金", "", "", str(amt),
-                memo, "", "", "", ""
+                date, income_expense, account, "課税仕入10%", str(amt), "現金", memo
             ])
             total += amt
             cats.add(cat)
@@ -364,12 +374,22 @@ def process_files(files_data, month, applicant):
 
     except Exception as e:
         status["error"] = str(e)
-@app.route("/landing")
-def landing():
-    return send_file("landing.html")
+
 @app.route("/")
 def index():
     return send_file("keihi_app.html")
+
+@app.route("/landing.html")
+def landing():
+    return send_file("landing.html")
+
+@app.route("/landing")
+def landing():
+    return send_file("landing.html")
+
+@app.route("/landing.html")
+def landing_html():
+    return send_file("landing.html")
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
