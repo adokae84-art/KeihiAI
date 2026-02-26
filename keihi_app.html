@@ -730,7 +730,7 @@
   function showResult(data) {
     document.getElementById('progressSection').classList.remove('visible');
     document.getElementById('resultSection').classList.add('visible');
-    document.getElementById('sumCount').textContent = data.count || files.length;
+    document.getElementById('sumCount').textContent = data.count
     document.getElementById('sumTotal').textContent = '¥' + (data.total || 0).toLocaleString();
     document.getElementById('sumCats').textContent = data.categories || 1;
     document.getElementById('resultSub').textContent = `${files.length}件のファイルを処理しました`;
