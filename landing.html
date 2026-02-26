@@ -238,6 +238,17 @@
   .features-inner { max-width: 900px; margin: 0 auto; }
   .features .section-label { color: var(--green-accent); }
   .features .section-title { color: #fff; }
+
+  /* USE CASES */
+  .usecases { padding: 5rem 1.5rem; max-width: 1100px; margin: 0 auto; }
+  .usecase-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; }
+  .usecase-category { background: #fff; border-radius: 16px; padding: 1.8rem; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+  .usecase-cat-title { font-size: 1.05rem; font-weight: 700; color: var(--green-dark); margin-bottom: 1.2rem; padding-bottom: 0.8rem; border-bottom: 2px solid var(--green-light); }
+  .usecase-list { display: flex; flex-direction: column; gap: 0.8rem; }
+  .usecase-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; }
+  .usecase-from { color: var(--text-dark); font-weight: 500; flex: 1; }
+  .usecase-arrow { color: var(--green-accent); font-weight: 700; font-size: 1.1rem; }
+  .usecase-to { color: var(--green-dark); font-weight: 700; flex: 1; text-align: right; }
   .features-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -445,6 +456,48 @@
     </ul>
     <a href="https://keihiai.onrender.com" class="price-cta">無料で試してみる →</a>
     <p class="price-note">クレジットカード不要・登録不要</p>
+  </div>
+</section>
+
+<section class="usecases" id="usecases">
+  <div class="section-label">USE CASES</div>
+  <div class="section-title">こんな使い方もできます</div>
+  <p style="text-align:center;color:var(--text-light);margin-bottom:2.5rem;font-size:0.95rem;">レシート以外にも「写真・PDF → Excel自動化」として幅広く活用できます</p>
+
+  <div class="usecase-grid">
+    <div class="usecase-category">
+      <div class="usecase-cat-title">💼 ビジネス系</div>
+      <div class="usecase-list">
+        <div class="usecase-item"><span class="usecase-from">📄 領収書・レシート</span><span class="usecase-arrow">→</span><span class="usecase-to">経費精算表</span></div>
+        <div class="usecase-item"><span class="usecase-from">🧾 請求書の写真</span><span class="usecase-arrow">→</span><span class="usecase-to">支払い管理表</span></div>
+        <div class="usecase-item"><span class="usecase-from">🪪 名刺の写真</span><span class="usecase-arrow">→</span><span class="usecase-to">顧客リスト</span></div>
+        <div class="usecase-item"><span class="usecase-from">📑 契約書PDF</span><span class="usecase-arrow">→</span><span class="usecase-to">一覧表</span></div>
+      </div>
+    </div>
+
+    <div class="usecase-category">
+      <div class="usecase-cat-title">🏠 日常・個人系</div>
+      <div class="usecase-list">
+        <div class="usecase-item"><span class="usecase-from">✍️ 手書きメモ</span><span class="usecase-arrow">→</span><span class="usecase-to">Excel表</span></div>
+        <div class="usecase-item"><span class="usecase-from">🏥 健康診断の結果</span><span class="usecase-arrow">→</span><span class="usecase-to">数値管理表</span></div>
+        <div class="usecase-item"><span class="usecase-from">🏦 通帳の写真</span><span class="usecase-arrow">→</span><span class="usecase-to">家計簿</span></div>
+        <div class="usecase-item"><span class="usecase-from">🥦 食材の写真</span><span class="usecase-arrow">→</span><span class="usecase-to">在庫管理表</span></div>
+      </div>
+    </div>
+
+    <div class="usecase-category">
+      <div class="usecase-cat-title">🏢 業務系</div>
+      <div class="usecase-list">
+        <div class="usecase-item"><span class="usecase-from">📦 納品書・発注書</span><span class="usecase-arrow">→</span><span class="usecase-to">在庫管理</span></div>
+        <div class="usecase-item"><span class="usecase-from">🕐 タイムカードの写真</span><span class="usecase-arrow">→</span><span class="usecase-to">勤怠管理表</span></div>
+        <div class="usecase-item"><span class="usecase-from">📋 アンケート用紙</span><span class="usecase-arrow">→</span><span class="usecase-to">集計表</span></div>
+        <div class="usecase-item"><span class="usecase-from">📝 ホワイトボード</span><span class="usecase-arrow">→</span><span class="usecase-to">議事録</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin-top:3rem;">
+    <a href="/" class="btn-primary" style="display:inline-block;padding:1rem 2.5rem;background:var(--green-dark);color:#fff;border-radius:50px;text-decoration:none;font-weight:600;font-size:1rem;">無料で試してみる →</a>
   </div>
 </section>
 
