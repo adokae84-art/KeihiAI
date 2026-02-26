@@ -109,16 +109,26 @@ def read_receipt_with_claude(image_path):
 
         response = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=500,
+            max_tokens=1500,
             messages=[{
                 "role": "user",
                 "content": [
                     {"type": content_type, "source": source},
-                    {"type": "text", "text": "この画像またはPDFは領収書・レシート・経費精算書です。内容を読み取り、以下のJSON形式で返してください。【重要】金額は合計・小計・税込合計の金額を使ってください。お釣り・お預り・現金受取・PayPayなど支払い関連の金額は絶対に使わないでください。店名が書いていない場合はファイルの内容から推測してください。{\"店名\": \"\", \"日付\": \"\", \"金額\": 0, \"カテゴリ\": \"\", \"支払方法\": \"\", \"備考\": \"\"}。JSONのみ返してください。"}
+                    {"type": "text", "text": "この画像またはPDFに写っている領収書・レシートをすべて読み取ってください。【重要ルール】①金額は合計・小計・税込合計を使う。お釣り・お預り・PayPayなど支払い関連の金額は絶対に使わない。②レシートが1枚だけならJSONオブジェクト1つ、複数枚写っていたらJSON配列で返す。③店名がない場合は内容から推測する。フォーマット（1枚）: {\"店名\": \"\", \"日付\": \"\", \"金額\": 0, \"カテゴリ\": \"\", \"支払方法\": \"\", \"備考\": \"\"}　フォーマット（複数）: [{\"店名\": \"\", ...}, {\"店名\": \"\", ...}]　JSONのみ返してください。"}
                 ]
             }]
         )
         text = response.content[0].text
+        # まず配列（複数レシート）を試みる
+        match = re.search(r'\[.*?\]', text, re.DOTALL)
+        if match:
+            try:
+                result = json.loads(match.group())
+                if isinstance(result, list) and len(result) > 0:
+                    return result  # リストをそのまま返す
+            except:
+                pass
+        # 次に単一オブジェクトを試みる
         match = re.search(r'\{[^{}]*\}', text)
         if match:
             try:
@@ -352,7 +362,11 @@ def process_files(files_data, month, applicant):
             result = read_receipt_with_claude(path)
             if not result:
                 result = fallback_read(path, name)
-            receipts.append(result)
+            # 複数レシートが1枚の画像に写っていた場合はリストで返る
+            if isinstance(result, list):
+                receipts.extend(result)
+            else:
+                receipts.append(result)
 
         status["step"] = 3
         for r in receipts:
