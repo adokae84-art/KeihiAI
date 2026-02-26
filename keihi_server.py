@@ -334,8 +334,12 @@ def process_files(files_data, month, applicant):
         # Step1: ファイル読み込み
         status["step"] = 1
         saved_paths = []
+        import time
         for name, data in files_data:
-            path = UPLOAD_DIR / name
+            # ファイル名にタイムスタンプを付けて重複を防ぐ
+            ts = str(int(time.time() * 1000))
+            unique_name = f"{ts}_{name}"
+            path = UPLOAD_DIR / unique_name
             path.write_bytes(data)
             saved_paths.append((name, path))
 
@@ -355,8 +359,14 @@ def process_files(files_data, month, applicant):
                 text = r.get("店名","") + r.get("備考","")
                 r["カテゴリ"] = guess_category(text)
 
-        # Step4: 整形
+        # Step4: 整形・月を自動判定
         status["step"] = 4
+        # レシートの日付から対象月を自動判定
+        if not month and receipts:
+            dates = [r.get("日付", "") for r in receipts if r.get("日付")]
+            if dates:
+                dates.sort()
+                month = dates[0][:7].replace("-", "/")  # 最初の日付のYYYY/MM
 
         # Step5: 出力形式に応じて生成
         status["step"] = 5
@@ -388,8 +398,8 @@ def analyze():
     global status
     status = {"step": 0, "done": False, "error": None, "count": 0, "total": 0, "categories": 0}
     files_data = [(f.filename, f.read()) for f in request.files.getlist("files")]
-    month = request.form.get("month", "")
     applicant = request.form.get("applicant", "")
+    month = ""  # レシートの日付から自動判定
     status["format"] = request.form.get("format", "excel")
     threading.Thread(target=process_files, args=(files_data, month, applicant)).start()
     return jsonify({"ok": True})
