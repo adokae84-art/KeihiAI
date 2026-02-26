@@ -439,18 +439,11 @@ def get_status():
 
 @app.route("/download_expense")
 def download():
-    fmt = status.get("format", "excel")
     output_file = status.get("output_file", "")
-    dl_names = {
-        "excel": "expense_report.xlsx",
-        "csv":   "expense_report.csv",
-        "freee": "freee_import.csv",
-        "pdf":   "expense_report.pdf",
-    }
-    dl_name = dl_names.get(fmt, "expense_report.xlsx")
     path = Path(output_file)
     if path.exists():
-        return send_file(str(path), as_attachment=True, download_name=dl_name)
+        # タイムスタンプ付きのファイル名をそのままダウンロード名に使う
+        return send_file(str(path), as_attachment=True, download_name=path.name)
     return jsonify({"error": "ファイルが見つかりません"}), 404
 
 if __name__ == "__main__":
