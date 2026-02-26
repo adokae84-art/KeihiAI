@@ -406,15 +406,29 @@ def index():
 def landing():
     return send_file("landing.html")
 
+processing_lock = threading.Lock()
+
 @app.route("/analyze", methods=["POST"])
 def analyze():
     global status
+    # 前の処理が終わっていない場合は待たずにエラー返す
+    if not processing_lock.acquire(blocking=False):
+        return jsonify({"ok": False, "error": "処理中です"}), 429
+
+    # statusを完全リセット
     status = {"step": 0, "done": False, "error": None, "count": 0, "total": 0, "categories": 0}
     files_data = [(f.filename, f.read()) for f in request.files.getlist("files")]
     applicant = request.form.get("applicant", "")
     month = ""  # レシートの日付から自動判定
     status["format"] = request.form.get("format", "excel")
-    threading.Thread(target=process_files, args=(files_data, month, applicant)).start()
+
+    def run_and_release():
+        try:
+            process_files(files_data, month, applicant)
+        finally:
+            processing_lock.release()
+
+    threading.Thread(target=run_and_release).start()
     return jsonify({"ok": True})
 
 @app.route("/status_expense")
