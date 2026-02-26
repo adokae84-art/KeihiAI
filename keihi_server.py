@@ -36,6 +36,18 @@ CATEGORY_RULES = {
     "通信費": ["ドコモ", "au", "ソフトバンク", "通信", "インターネット"],
 }
 
+def get_output_filename(fmt):
+    """タイムスタンプ付きのユニークなファイル名を生成"""
+    import datetime
+    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    names = {
+        "excel": f"expense_report_{ts}.xlsx",
+        "csv":   f"expense_report_{ts}.csv",
+        "freee": f"expense_report_freee_{ts}.csv",
+        "pdf":   f"expense_report_{ts}.pdf",
+    }
+    return names.get(fmt, f"expense_report_{ts}.xlsx")
+
 def guess_category(text):
     for cat, keywords in CATEGORY_RULES.items():
         for kw in keywords:
@@ -146,7 +158,7 @@ def make_freee_csv(receipts, month, applicant):
         "雑費": "支出",
     }
     
-    with open("expense_report_freee.csv", "w", newline="", encoding="utf-8-sig") as f:
+    with open(status.get("output_file", "expense_report_freee.csv"), "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
         # freee取引インポート正式ヘッダー
         writer.writerow([
@@ -172,7 +184,7 @@ def make_csv(receipts, month, applicant):
     import csv
     total = 0
     cats = set()
-    with open("expense_report.csv", "w", newline="", encoding="utf-8-sig") as f:
+    with open(status.get("output_file", "expense_report.csv"), "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
         writer.writerow(["No.", "店名", "日付", "カテゴリ", "金額（円）", "支払方法", "備考"])
         for i, r in enumerate(receipts, 1):
@@ -192,7 +204,7 @@ def make_pdf(receipts, month, applicant):
     from reportlab.pdfbase.cidfonts import UnicodeCIDFont
     pdfmetrics.registerFont(UnicodeCIDFont("HeiseiKakuGo-W5"))
 
-    doc = SimpleDocTemplate("expense_report.pdf", pagesize=A4)
+    doc = SimpleDocTemplate(status.get("output_file", "expense_report.pdf"), pagesize=A4)
     styles = getSampleStyleSheet()
     story = []
 
@@ -322,7 +334,7 @@ def make_excel(receipts, month, applicant):
     chart.series[0].graphicalProperties.solidFill = "52B788"
     ws2.add_chart(chart, "D2")
 
-    output = "expense_report.xlsx"
+    output = status.get("output_file", "expense_report.xlsx")
     wb.save(output)
     return total, len(cat_totals)
 
@@ -371,6 +383,7 @@ def process_files(files_data, month, applicant):
         # Step5: 出力形式に応じて生成
         status["step"] = 5
         fmt = status.get("format", "excel")
+        status["output_file"] = get_output_filename(fmt)
         if fmt == "csv":
             total, cats = make_csv(receipts, month, applicant)
         elif fmt == "freee":
@@ -411,13 +424,15 @@ def get_status():
 @app.route("/download_expense")
 def download():
     fmt = status.get("format", "excel")
-    files_map = {
-        "excel": ("expense_report.xlsx", "expense_report.xlsx"),
-        "csv":   ("expense_report.csv",  "expense_report.csv"),
-        "freee": ("expense_report_freee.csv", "freee_import.csv"),
-        "pdf":   ("expense_report.pdf",  "expense_report.pdf"),
+    output_file = status.get("output_file", "expense_report.xlsx")
+    dl_names = {
+        "excel": "expense_report.xlsx",
+        "csv":   "expense_report.csv",
+        "freee": "freee_import.csv",
+        "pdf":   "expense_report.pdf",
     }
-    filename, dl_name = files_map.get(fmt, files_map["excel"])
+    filename = output_file
+    dl_name = dl_names.get(fmt, "expense_report.xlsx")
     path = Path(filename)
     if path.exists():
         return send_file(str(path), as_attachment=True, download_name=dl_name)
