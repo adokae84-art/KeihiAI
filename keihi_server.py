@@ -36,6 +36,16 @@ CATEGORY_RULES = {
     "通信費": ["ドコモ", "au", "ソフトバンク", "通信", "インターネット"],
 }
 
+FREEE_ACCOUNT_MAP = {
+    "交通費": "旅費交通費",
+    "飲食費": "交際費",
+    "消耗品": "消耗品費",
+    "通信費": "通信費",
+    "宿泊費": "旅費交通費",
+    "駐車場": "旅費交通費",
+    "その他": "雑費",
+}
+
 def get_output_filename(fmt):
     """タイムスタンプ付きのユニークなファイル名を生成"""
     import datetime
@@ -83,10 +93,8 @@ def read_receipt_with_claude(image_path):
         import anthropic
         client = anthropic.Anthropic(api_key=api_key)
         
-        # PDFとPNG/JPGを両方対応
         image_path_str = str(image_path)
         if image_path_str.lower().endswith(".pdf"):
-            # PDFの場合はbase64でそのまま送る
             with open(image_path_str, "rb") as f:
                 b64 = base64.standard_b64encode(f.read()).decode()
             media_type = "application/pdf"
@@ -111,14 +119,12 @@ def read_receipt_with_claude(image_path):
             }]
         )
         text = response.content[0].text
-        # 最初の完全なJSONオブジェクトだけを取得
         match = re.search(r'\{[^{}]*\}', text)
         if match:
             try:
                 return json.loads(match.group())
             except:
                 pass
-        # フォールバック: DOTALLで試す
         match = re.search(r'\{.*?\}', text, re.DOTALL)
         if match:
             try:
@@ -130,8 +136,6 @@ def read_receipt_with_claude(image_path):
     return None
 
 def fallback_read(image_path, filename):
-    """APIなしのフォールバック（ファイル名とサンプルデータで処理）"""
-    # 実際のアプリではpytesseract等でOCRする
     return {
         "店名": filename.replace(".jpg", "").replace(".png", "").replace(".pdf", ""),
         "日付": "2025/10/01",
@@ -141,15 +145,13 @@ def fallback_read(image_path, filename):
         "備考": "手動確認推奨"
     }
 
+# ★修正: output_file を引数で受け取るように変更（status依存をなくす）
 
-
-def make_freee_csv(receipts, month, applicant):
-    """freee取引インポート用CSV（正式フォーマット）"""
+def make_freee_csv(receipts, month, applicant, output_file):
     import csv
     total = 0
     cats = set()
     
-    # freee勘定科目→収支区分マッピング
     INCOME_EXPENSE_MAP = {
         "旅費交通費": "支出",
         "交際費": "支出",
@@ -158,9 +160,8 @@ def make_freee_csv(receipts, month, applicant):
         "雑費": "支出",
     }
     
-    with open(status.get("output_file", "expense_report_freee.csv"), "w", newline="", encoding="utf-8-sig") as f:
+    with open(output_file, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
-        # freee取引インポート正式ヘッダー
         writer.writerow([
             "発生日", "収支区分", "勘定科目", "税区分", "金額", "決済口座", "摘要"
         ])
@@ -180,11 +181,11 @@ def make_freee_csv(receipts, month, applicant):
             cats.add(cat)
     return total, len(cats)
 
-def make_csv(receipts, month, applicant):
+def make_csv(receipts, month, applicant, output_file):
     import csv
     total = 0
     cats = set()
-    with open(status.get("output_file", "expense_report.csv"), "w", newline="", encoding="utf-8-sig") as f:
+    with open(output_file, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
         writer.writerow(["No.", "店名", "日付", "カテゴリ", "金額（円）", "支払方法", "備考"])
         for i, r in enumerate(receipts, 1):
@@ -195,7 +196,7 @@ def make_csv(receipts, month, applicant):
         writer.writerow(["合計", "", "", "", total, "", ""])
     return total, len(cats)
 
-def make_pdf(receipts, month, applicant):
+def make_pdf(receipts, month, applicant, output_file):
     from reportlab.lib.pagesizes import A4
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
     from reportlab.lib.styles import getSampleStyleSheet
@@ -204,7 +205,7 @@ def make_pdf(receipts, month, applicant):
     from reportlab.pdfbase.cidfonts import UnicodeCIDFont
     pdfmetrics.registerFont(UnicodeCIDFont("HeiseiKakuGo-W5"))
 
-    doc = SimpleDocTemplate(status.get("output_file", "expense_report.pdf"), pagesize=A4)
+    doc = SimpleDocTemplate(output_file, pagesize=A4)
     styles = getSampleStyleSheet()
     story = []
 
@@ -239,7 +240,7 @@ def make_pdf(receipts, month, applicant):
     doc.build(story)
     return total, len(cats)
 
-def make_excel(receipts, month, applicant):
+def make_excel(receipts, month, applicant, output_file):
     wb = Workbook()
     ws = wb.active
     ws.title = "経費一覧"
@@ -247,7 +248,6 @@ def make_excel(receipts, month, applicant):
     thin = Side(style="thin", color="DDDDDD")
     bdr = Border(left=thin, right=thin, top=thin, bottom=thin)
 
-    # タイトル
     ws.merge_cells("A1:G1")
     ws["A1"].value = f"経費精算書　{month}　申請者：{applicant or '未記入'}"
     ws["A1"].font = Font(name="Arial", bold=True, size=13, color="2D6A4F")
@@ -255,7 +255,6 @@ def make_excel(receipts, month, applicant):
     ws["A1"].fill = PatternFill("solid", start_color="E8F5EE")
     ws.row_dimensions[1].height = 32
 
-    # ヘッダー
     headers = ["No.", "店名", "日付", "カテゴリ", "金額（円）", "支払方法", "備考"]
     widths =  [5,     24,    14,    14,          13,          12,          28]
     for i, (h, w) in enumerate(zip(headers, widths), 1):
@@ -268,7 +267,6 @@ def make_excel(receipts, month, applicant):
         ws.column_dimensions[get_column_letter(i)].width = w
     ws.row_dimensions[2].height = 22
 
-    # データ
     total = 0
     for i, r in enumerate(receipts, 1):
         row = i + 2
@@ -285,7 +283,6 @@ def make_excel(receipts, month, applicant):
         total += r.get("金額", 0)
         ws.row_dimensions[row].height = 20
 
-    # 合計行
     tr = len(receipts) + 3
     ws.merge_cells(f"A{tr}:D{tr}")
     c = ws.cell(row=tr, column=1)
@@ -308,7 +305,6 @@ def make_excel(receipts, month, applicant):
         ws.cell(row=tr, column=col).border = bdr
     ws.row_dimensions[tr].height = 26
 
-    # カテゴリ別集計シート
     ws2 = wb.create_sheet("カテゴリ別集計")
     cat_totals = {}
     for r in receipts:
@@ -319,7 +315,6 @@ def make_excel(receipts, month, applicant):
     for cat, amt in cat_totals.items():
         ws2.append([cat, amt])
 
-    # 棒グラフ
     chart = BarChart()
     chart.type = "col"
     chart.title = "カテゴリ別経費"
@@ -328,14 +323,13 @@ def make_excel(receipts, month, applicant):
     chart.width = 16
     chart.height = 10
     data = Reference(ws2, min_col=2, max_col=2, min_row=1, max_row=len(cat_totals)+1)
-    cats = Reference(ws2, min_col=1, min_row=2, max_row=len(cat_totals)+1)
+    cats_ref = Reference(ws2, min_col=1, min_row=2, max_row=len(cat_totals)+1)
     chart.add_data(data, titles_from_data=True)
-    chart.set_categories(cats)
+    chart.set_categories(cats_ref)
     chart.series[0].graphicalProperties.solidFill = "52B788"
     ws2.add_chart(chart, "D2")
 
-    output = status.get("output_file", "expense_report.xlsx")
-    wb.save(output)
+    wb.save(output_file)
     return total, len(cat_totals)
 
 def process_files(files_data, month, applicant):
@@ -343,55 +337,50 @@ def process_files(files_data, month, applicant):
     try:
         receipts = []
 
-        # Step1: ファイル読み込み
         status["step"] = 1
         saved_paths = []
         import time
         for name, data in files_data:
-            # ファイル名にタイムスタンプを付けて重複を防ぐ
             ts = str(int(time.time() * 1000))
             unique_name = f"{ts}_{name}"
             path = UPLOAD_DIR / unique_name
             path.write_bytes(data)
             saved_paths.append((name, path))
 
-        # Step2: AI文字認識
         status["step"] = 2
         for name, path in saved_paths:
             result = read_receipt_with_claude(path)
             if not result:
-                # フォールバック
                 result = fallback_read(path, name)
             receipts.append(result)
 
-        # Step3: カテゴリ分類
         status["step"] = 3
         for r in receipts:
             if not r.get("カテゴリ") or r["カテゴリ"] == "その他":
                 text = r.get("店名","") + r.get("備考","")
                 r["カテゴリ"] = guess_category(text)
 
-        # Step4: 整形・月を自動判定
         status["step"] = 4
-        # レシートの日付から対象月を自動判定
         if not month and receipts:
             dates = [r.get("日付", "") for r in receipts if r.get("日付")]
             if dates:
                 dates.sort()
-                month = dates[0][:7].replace("-", "/")  # 最初の日付のYYYY/MM
+                month = dates[0][:7].replace("-", "/")
 
-        # Step5: 出力形式に応じて生成
+        # ★修正: output_fileを先に確定してからmake_xxx()に引数で渡す
         status["step"] = 5
         fmt = status.get("format", "excel")
-        status["output_file"] = get_output_filename(fmt)
+        output_file = get_output_filename(fmt)   # ここで確定
+        status["output_file"] = output_file       # statusにも保存（download用）
+
         if fmt == "csv":
-            total, cats = make_csv(receipts, month, applicant)
+            total, cats = make_csv(receipts, month, applicant, output_file)
         elif fmt == "freee":
-            total, cats = make_freee_csv(receipts, month, applicant)
+            total, cats = make_freee_csv(receipts, month, applicant, output_file)
         elif fmt == "pdf":
-            total, cats = make_pdf(receipts, month, applicant)
+            total, cats = make_pdf(receipts, month, applicant, output_file)
         else:
-            total, cats = make_excel(receipts, month, applicant)
+            total, cats = make_excel(receipts, month, applicant, output_file)
 
         status.update({"done": True, "count": len(receipts), "total": total, "categories": cats})
 
@@ -411,15 +400,14 @@ processing_lock = threading.Lock()
 @app.route("/analyze", methods=["POST"])
 def analyze():
     global status
-    # 前の処理が終わっていない場合は待たずにエラー返す
     if not processing_lock.acquire(blocking=False):
         return jsonify({"ok": False, "error": "処理中です"}), 429
 
-    # statusを完全リセット
+    # ★statusを完全リセット（output_fileも含めてクリア）
     status = {"step": 0, "done": False, "error": None, "count": 0, "total": 0, "categories": 0}
     files_data = [(f.filename, f.read()) for f in request.files.getlist("files")]
     applicant = request.form.get("applicant", "")
-    month = ""  # レシートの日付から自動判定
+    month = ""
     status["format"] = request.form.get("format", "excel")
 
     def run_and_release():
@@ -438,16 +426,15 @@ def get_status():
 @app.route("/download_expense")
 def download():
     fmt = status.get("format", "excel")
-    output_file = status.get("output_file", "expense_report.xlsx")
+    output_file = status.get("output_file", "")
     dl_names = {
         "excel": "expense_report.xlsx",
         "csv":   "expense_report.csv",
         "freee": "freee_import.csv",
         "pdf":   "expense_report.pdf",
     }
-    filename = output_file
     dl_name = dl_names.get(fmt, "expense_report.xlsx")
-    path = Path(filename)
+    path = Path(output_file)
     if path.exists():
         return send_file(str(path), as_attachment=True, download_name=dl_name)
     return jsonify({"error": "ファイルが見つかりません"}), 404
