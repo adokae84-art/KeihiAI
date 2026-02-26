@@ -675,8 +675,14 @@
     formData.append('applicant', document.getElementById('applicant').value);
     formData.append('format', document.getElementById('outputFormat').value);
 
-    // サーバーに送信
-    fetch('/analyze', { method: 'POST', body: formData });
+    // ★修正①: /analyze のPOST完了を待ってからポーリング開始
+    // （サーバー側がステータスをリセットしてから処理を始めるため、
+    //   前回のdone:trueを拾わないようにする）
+    try {
+      await fetch('/analyze', { method: 'POST', body: formData });
+    } catch(e) {
+      // fetch自体のエラーは無視してポーリングへ（タイムアウト対策）
+    }
 
     // プログレス表示
     const steps = [
@@ -688,12 +694,29 @@
     ];
     const bar = document.getElementById('progressBar');
     const sub = document.getElementById('progressSub');
+
+    // ★修正②: last を関数スコープで確実に 0 にリセット
     let last = 0;
+
+    // ★修正③: ポーリング開始前に /status_expense を1回リセット確認
+    //   最初の数回は done:true が残っていても無視するフラグを用意
+    let requestStarted = false;
 
     const poll = setInterval(async () => {
       try {
         const res = await fetch('/status_expense');
         const data = await res.json();
+
+        // ★修正④: サーバー側のステータスがまだ前回のものである可能性があるため、
+        //   step が 1 以上になって初めて「今回のリクエストが始まった」と判断する
+        if (!requestStarted) {
+          if (data.done || data.step === 0 || data.step === undefined) {
+            // まだ前回の残骸か、リセット待ち → 無視して次のポーリングを待つ
+            return;
+          }
+          requestStarted = true;
+        }
+
         const step = data.step;
         if (step > last) {
           if (last > 0) {
@@ -730,7 +753,7 @@
   function showResult(data) {
     document.getElementById('progressSection').classList.remove('visible');
     document.getElementById('resultSection').classList.add('visible');
-    document.getElementById('sumCount').textContent = data.count
+    document.getElementById('sumCount').textContent = data.count;
     document.getElementById('sumTotal').textContent = '¥' + (data.total || 0).toLocaleString();
     document.getElementById('sumCats').textContent = data.categories || 1;
     document.getElementById('resultSub').textContent = `${files.length}件のファイルを処理しました`;
